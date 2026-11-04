@@ -1,13 +1,13 @@
 import axios from "axios";
 
-let mode = "devddd";
+let mode = "dev";
 
 
 
 
 const getBaseURL = () => {
   if (mode === "dev") {
-    return "http://localhost:3000/api";
+    return "https://ooshasprep.vercel.app/api";
   }
   return "https://www.ooshasprep.com/api";
 };
