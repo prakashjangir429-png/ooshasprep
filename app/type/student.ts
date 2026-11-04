@@ -1,0 +1,28 @@
+import * as z  from "zod";
+
+export const StudentValidationSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(40, "Name to long"),
+  slug: z.string().trim().max(100, "Slug must be 100 characters or less").optional(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  heroImage: z.string().optional(),
+  button1Text: z.string().optional(),
+  button1Url: z.string().optional(),
+  button2Text: z.string().optional(),
+  button2Url: z.string().optional(),
+  course: z.string().trim().min(1, "Course is required"),
+  colorCode: z.string().optional(),
+  score: z.string().optional(),
+  image: z.string().url("Invalide image url").optional(),
+  university: z.string().optional(),
+  universityLogo: z.string().url("Invalid image url").optional(),
+  about: z.any().default({}),
+  outcome: z.any().default({}),
+  type: z.enum(["image", "video"]).default("image"),
+  message: z.string().optional(),
+  messageDate: z.string().optional(),// Use z.coerce.date() if sending ISO strings
+  video: z.string().optional(),
+  rating: z.string().optional(),
+});
+
+export type StudentInput = z.infer<typeof StudentValidationSchema>;

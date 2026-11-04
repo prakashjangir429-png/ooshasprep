@@ -1,0 +1,36 @@
+import React, { Suspense } from "react";
+import "@/app/globals.css";
+import { Noto_Sans } from "next/font/google";
+import { GlobalProvider } from "@/hooks/AppStateContext";
+import FloatingWhatsApp from "@/components/floating-whatsapp";
+import WebsiteTracker from "@/components/analytics/WebsiteTracker";
+
+const notoSans = Noto_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-noto-sans",
+  display: "swap",
+});
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body
+        className={notoSans.className}
+        suppressHydrationWarning
+      >
+
+        <GlobalProvider>
+          <WebsiteTracker />
+          {children}
+          <Suspense fallback={null}><FloatingWhatsApp /></Suspense>
+        </GlobalProvider>
+
+      </body>
+    </html>
+  );
+}

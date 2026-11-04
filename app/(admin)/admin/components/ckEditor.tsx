@@ -1,0 +1,498 @@
+import { useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import {
+	ClassicEditor,
+	Autosave,
+	Essentials,
+	Paragraph,
+	Autoformat,
+	TextTransformation,
+	LinkImage,
+	Link,
+	ImageBlock,
+	ImageToolbar,
+	BlockQuote,
+	Bold,
+	CloudServices,
+	ImageUpload,
+	ImageInsert,
+	ImageInsertViaUrl,
+	AutoImage,
+	Table,
+	TableToolbar,
+	Heading,
+	ImageTextAlternative,
+	ImageCaption,
+	ImageStyle,
+	Indent,
+	IndentBlock,
+	ImageInline,
+	Italic,
+	List,
+	MediaEmbed,
+	TableCaption,
+	TodoList,
+	Underline,
+	Fullscreen,
+	Markdown,
+	PasteFromMarkdownExperimental,
+	Strikethrough,
+	Code,
+	Subscript,
+	Superscript,
+	FontBackgroundColor,
+	FontColor,
+	FontFamily,
+	FontSize,
+	Highlight,
+	AutoLink,
+	CodeBlock,
+	HorizontalLine,
+	Alignment,
+	Style,
+	GeneralHtmlSupport,
+	ShowBlocks,
+	HtmlComment,
+	TextPartLanguage,
+	PlainTableOutput,
+	SourceEditing,
+	ImageResize
+} from 'ckeditor5';
+
+import 'ckeditor5/ckeditor5.css';
+// import api from '../axiosInstance';
+
+const LICENSE_KEY = 'GPL';
+
+// ---------------------------------------------------------------------------
+// The actual upload call, now living inside CKEditorComponent itself.
+// Must match your backend: multer .single("image") on /upload/upload_blogs
+// ---------------------------------------------------------------------------
+const uploadImage = async (file) => {
+    const data = new FormData();
+    data.append("file", file);
+
+    try {
+      const response = await fetch("/api/admin/uploadimg", {
+        method: "POST",
+        body: data,
+      });
+
+		const res = await response.json();
+
+		const imageUrl = res?.url;
+
+		if (!imageUrl) {
+			throw new Error('Image URL not returned from server');
+		}
+
+		return imageUrl;
+	} catch (error) {
+		console.error('Image upload failed:', error);
+	}
+}
+
+const getBaseEditorConfig = () => ({
+	plugins: [
+		Alignment,
+		Autoformat,
+		AutoImage,
+		AutoLink,
+		Autosave,
+		BlockQuote,
+		Bold,
+		CloudServices,
+		Code,
+		CodeBlock,
+		Essentials,
+		FontBackgroundColor,
+		FontColor,
+		FontFamily,
+		FontSize,
+		Fullscreen,
+		GeneralHtmlSupport,
+		Heading,
+		Highlight,
+		HorizontalLine,
+		HtmlComment,
+		ImageBlock,
+		ImageCaption,
+		ImageInline,
+		ImageInsert,
+		ImageInsertViaUrl,
+		ImageStyle,
+		ImageResize, 
+		ImageTextAlternative,
+		ImageToolbar,
+		ImageUpload,
+		Indent,
+		IndentBlock,
+		Italic,
+		Link,
+		LinkImage,
+		List,
+		MediaEmbed,
+		Paragraph,
+		PlainTableOutput,
+		ShowBlocks,
+		SourceEditing,
+		Strikethrough,
+		Style,
+		Subscript,
+		Superscript,
+		Table,
+		TableCaption,
+		TableToolbar,
+		TextPartLanguage,
+		TextTransformation,
+		TodoList,
+		Underline
+	],
+	licenseKey: LICENSE_KEY,
+	fontFamily: {
+		supportAllValues: true
+	},
+	fontSize: {
+		options: [10, 12, 14, 'default', 18, 20, 22],
+		supportAllValues: true
+	},
+	fullscreen: {
+		onEnterCallback: container =>
+			container.classList.add(
+				'editor-container',
+				'editor-container_classic-editor',
+				'editor-container_include-style',
+				'editor-container_include-fullscreen',
+				'main-container'
+			)
+	},
+	heading: {
+		options: [
+			{
+				model: 'paragraph',
+				title: 'Paragraph',
+				class: 'ck-heading_paragraph'
+			},
+			{
+				model: 'heading1',
+				view: 'h1',
+				title: 'Heading 1',
+				class: 'ck-heading_heading1'
+			},
+			{
+				model: 'heading2',
+				view: 'h2',
+				title: 'Heading 2',
+				class: 'ck-heading_heading2'
+			},
+			{
+				model: 'heading3',
+				view: 'h3',
+				title: 'Heading 3',
+				class: 'ck-heading_heading3'
+			},
+			{
+				model: 'heading4',
+				view: 'h4',
+				title: 'Heading 4',
+				class: 'ck-heading_heading4'
+			},
+			{
+				model: 'heading5',
+				view: 'h5',
+				title: 'Heading 5',
+				class: 'ck-heading_heading5'
+			},
+			{
+				model: 'heading6',
+				view: 'h6',
+				title: 'Heading 6',
+				class: 'ck-heading_heading6'
+			}
+		]
+	},
+	htmlSupport: {
+		allow: [
+			{
+				name: /^.*$/,
+				styles: true,
+				attributes: true,
+				classes: true
+			}
+		]
+	},
+	image: {
+		// 'Update image' shows up automatically on this toolbar when an
+		// image is selected, as long as ImageInsert is in the plugin list.
+		toolbar: [
+			'imageInsert',
+			'toggleImageCaption',
+			'imageTextAlternative',
+			'|',
+			'imageStyle:inline',
+			'imageStyle:wrapText',
+			'imageStyle:breakText',
+			'imageResize'
+		],
+		insert: {
+			integrations: ['upload', 'url']
+		}
+	},
+	link: {
+		addTargetToExternalLinks: true,
+		defaultProtocol: 'https://',
+		decorators: {
+			toggleDownloadable: {
+				mode: 'manual',
+				label: 'Downloadable',
+				attributes: {
+					download: 'file'
+				}
+			}
+		}
+	},
+	menuBar: {
+		isVisible: true
+	},
+	style: {
+		definitions: [
+			{
+				name: 'Article category',
+				element: 'h3',
+				classes: ['category']
+			},
+			{
+				name: 'Title',
+				element: 'h2',
+				classes: ['document-title']
+			},
+			{
+				name: 'Subtitle',
+				element: 'h3',
+				classes: ['document-subtitle']
+			},
+			{
+				name: 'Info box',
+				element: 'p',
+				classes: ['info-box']
+			},
+			{
+				name: 'CTA Link Primary',
+				element: 'a',
+				classes: ['button', 'button--green']
+			},
+			{
+				name: 'CTA Link Secondary',
+				element: 'a',
+				classes: ['button', 'button--black']
+			},
+			{
+				name: 'Marker',
+				element: 'span',
+				classes: ['marker']
+			},
+			{
+				name: 'Spoiler',
+				element: 'span',
+				classes: ['spoiler']
+			}
+		]
+	},
+	table: {
+		contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
+	},
+	toolbar: {
+		items: [
+			'undo',
+			'redo',
+			'|',
+			'sourceEditing',
+			'showBlocks',
+			'textPartLanguage',
+			'fullscreen',
+			'|',
+			'heading',
+			'style',
+			'|',
+			'fontSize',
+			'fontFamily',
+			'fontColor',
+			'fontBackgroundColor',
+			'|',
+			'bold',
+			'italic',
+			'underline',
+			'strikethrough',
+			'subscript',
+			'superscript',
+			'code',
+			'|',
+			'horizontalLine',
+			'link',
+			// 'insertImage' is the ImageInsert dropdown: upload from disk or
+			// via URL when nothing is selected, and "Update image"
+			// (re-upload/replace) when an image IS selected.
+			'insertImage',
+			'mediaEmbed',
+			'insertTable',
+			'highlight',
+			'blockQuote',
+			'codeBlock',
+			'|',
+			'alignment',
+			'|',
+			'bulletedList',
+			'numberedList',
+			'todoList',
+			'outdent',
+			'indent'
+		],
+		shouldNotGroupWhenFull: true
+	}
+});
+
+// Upload adapter plugin: hooks CKEditor's FileRepository straight into the
+// uploadImage() function defined above. No prop needed from the parent.
+function UploadAdapterPlugin(editor) {
+	editor.plugins.get('FileRepository').createUploadAdapter = (loader) => ({
+		upload() {
+			return loader.file.then((file) =>
+				uploadImage(file).then((url) => ({ default: url }))
+			);
+		},
+		abort() {
+			// no-op; add an AbortController here if you need cancellable uploads
+		}
+	});
+}
+
+const CKEditorComponent = forwardRef(({
+	value = '',
+	onChange,
+	onReady,
+	onFocus,
+	onBlur,
+	onError,
+	placeholder = 'Type or paste your content here!',
+	disabled = false,
+	readOnly = false,
+	className = '',
+	containerClassName = '',
+	config = {}
+}, ref) => {
+	const [isLayoutReady, setIsLayoutReady] = useState(false);
+	const editorRef = useRef(null);
+
+	useEffect(() => {
+		setIsLayoutReady(true);
+		return () => setIsLayoutReady(false);
+	}, []);
+
+	// Expose editor instance methods via ref
+	useImperativeHandle(ref, () => ({
+		getEditor: () => editorRef.current,
+		setData: (data) => {
+			if (editorRef.current) {
+				editorRef.current.setData(data);
+			}
+		},
+		getData: () => {
+			if (editorRef.current) {
+				return editorRef.current.getData();
+			}
+			return '';
+		},
+		destroy: () => {
+			if (editorRef.current) {
+				editorRef.current.destroy();
+			}
+		}
+	}));
+
+	const editorConfig = useMemo(() => {
+		if (!isLayoutReady) {
+			return null;
+		}
+
+		const baseConfig = getBaseEditorConfig();
+
+		// Merge custom config with base config
+		const mergedConfig = {
+			...baseConfig,
+			...config,
+			extraPlugins: [
+				...(baseConfig.extraPlugins || []),
+				...(config.extraPlugins || []),
+				UploadAdapterPlugin
+			],
+			root: {
+				placeholder: placeholder,
+				initialData: value,
+				...(config.root || {})
+			}
+		};
+
+		// Handle disabled/readOnly state
+		if (disabled || readOnly) {
+			mergedConfig.readOnly = true;
+		}
+
+		return mergedConfig;
+	}, [isLayoutReady, placeholder, value, config, disabled, readOnly]);
+
+	if (!isLayoutReady || !editorConfig) {
+		return <div className={`ckeditor-loading ${className}`}>Loading editor...</div>;
+	}
+
+	return (
+	<>
+		<style>
+			{`
+				.ck-editor__editable a {
+					color: #2563eb !important;
+					cursor: pointer;
+				}
+
+				.ck-editor__editable a:hover {
+					color: #1d4ed8 !important;
+				}
+			`}
+		</style>
+
+		<div
+			className={`editor-container editor-container_classic-editor editor-container_include-style editor-container_include-fullscreen ${containerClassName}`}
+		>
+			<div className="editor-container__editor">
+				<CKEditor
+					editor={ClassicEditor}
+					config={editorConfig}
+					data={value}
+					onReady={(editor) => {
+						editorRef.current = editor;
+						if (onReady) onReady(editor);
+					}}
+					onChange={(event, editor) => {
+						const data = editor.getData();
+						if (onChange) onChange(data, editor);
+					}}
+					onFocus={(event, editor) => {
+						if (onFocus) onFocus(event, editor);
+					}}
+					onBlur={(event, editor) => {
+						if (onBlur) onBlur(event, editor);
+					}}
+					onError={(error, details) => {
+						console.error('CKEditor error:', error, details);
+						if (onError) onError(error, details);
+					}}
+					disabled={disabled}
+				/>
+			</div>
+		</div>
+	</>
+);
+});
+
+CKEditorComponent.displayName = 'CKEditorComponent';
+
+export default CKEditorComponent;
