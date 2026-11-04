@@ -1,13 +1,10 @@
 import axios from "axios";
 
-let mode = "devjj";
-
-
-
+let mode = "dev";
 
 const getBaseURL = () => {
   if (mode === "dev") {
-    return "https://ooshasprep.vercel.app/api";
+    return "https://pn61xxhn-3000.inc1.devtunnels.ms/api";
   }
   return "https://www.ooshasprep.com/api";
 };
